@@ -9,29 +9,38 @@ module.exports = {
 	// radius secret
 	secret: 'testing123',
 
-	certificate: {
-		cert: fs.readFileSync(path.join(SSL_CERT_DIRECTORY, '/server.crt')),
-		key: [
-			{
-				pem: fs.readFileSync(path.join(SSL_CERT_DIRECTORY, '/server.key')),
-				passphrase: 'whatever2020',
-			},
+	authentication: 'StaticAuth',
+	authenticationOptions: {
+		validCredentials: [
+			{ username: 'test', password: 'pwd' },
+			{ username: 'user1', password: 'password' },
+			{ username: 'admin', password: 'cool' }
 		],
-		// sessionTimeout: 3600,
-		// sesionIdContext: 'meiasdfkljasdft!',
-		// ticketKeys: Buffer.from('123456789012345678901234567890123456789012345678'),
 	},
 
+	// certificate: {
+	// 	cert: fs.readFileSync(path.join(SSL_CERT_DIRECTORY, '/server.crt')),
+	// 	key: [
+	// 		{
+	// 			pem: fs.readFileSync(path.join(SSL_CERT_DIRECTORY, '/server.key')),
+	// 			passphrase: 'whatever2020',
+	// 		},
+	// 	],
+	// 	// sessionTimeout: 3600,
+	// 	// sesionIdContext: 'meiasdfkljasdft!',
+	// 	// ticketKeys: Buffer.from('123456789012345678901234567890123456789012345678'),
+	// },
+
 	// GoogleLDAPAuth (optimized for google auth)
-	authentication: 'GoogleLDAPAuth',
-	authenticationOptions: {
-		base: 'dc=hokify,dc=com',
-		// get your keys from http://admin.google.com/ -> Apps -> LDAP -> Client
-		tls: {
-			keyFile: 'ldap.gsuite.key',
-			certFile: 'ldap.gsuite.crt',
-		},
-	},
+	// authentication: 'GoogleLDAPAuth',
+	// authenticationOptions: {
+	// 	base: 'dc=hokify,dc=com',
+	// 	// get your keys from http://admin.google.com/ -> Apps -> LDAP -> Client
+	// 	tls: {
+	// 		keyFile: 'ldap.gsuite.key',
+	// 		certFile: 'ldap.gsuite.crt',
+	// 	},
+	// },
 
 	/** LDAP AUTH 
 	authentication: 'LDAPAuth',
