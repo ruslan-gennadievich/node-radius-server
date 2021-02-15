@@ -9,7 +9,7 @@ import { IAuthentication } from '../../../../types/Authentication';
 
 export class EAPMD5 implements IEAPMethod {
 	getEAPType(): number {
-		return 4;
+		return 44;
 	}
 
 	identify(_identifier: number, _stateID: string): IPacketHandlerResult {

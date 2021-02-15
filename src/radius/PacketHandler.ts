@@ -16,7 +16,7 @@ export class PacketHandler implements IPacketHandler {
 				new EAPTTLS(authentication, this),
 				new EAPGTC(authentication),
 				new EAPMD5(authentication),
-				new EAPSIS(authentication),
+				new EAPSIS(),
 			])
 		);
 		this.packetHandlers.push(new UserPasswordPacketHandler(authentication));

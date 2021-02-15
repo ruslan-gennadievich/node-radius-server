@@ -72,6 +72,17 @@ export class EAPPacketHandler implements IPacketHandler {
 							log('>>>>>>>>>>>> REQUEST FROM CLIENT: md5-challenge', {});
 
 							console.info('md5-challenge');
+							const eapMethod = this.eapMethods.find((method) => type === method.getEAPType());
+
+							if (eapMethod) {
+								return eapMethod.handleMessage(
+									identifier,
+									stateID,
+									data,
+									packet,
+									this.identities.get(stateID)
+								);
+							}
 							break;
 						case 253: {
 							log('EAP-SIS', {});
