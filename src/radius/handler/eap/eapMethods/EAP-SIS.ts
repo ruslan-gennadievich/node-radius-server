@@ -2,14 +2,12 @@
 // https://tools.ietf.org/html/draft-funk-eap-ttls-v1-00 TTLS v1 (not implemented)
 /* eslint-disable no-bitwise */
 import * as fs from 'fs';
+import * as tls from 'tls';
 import { RadiusPacket } from 'radius';
 import debug from 'debug';
-import { Certificate } from '@fidm/x509';
-
 import { IPacketHandlerResult, PacketResponseCode } from '../../../../types/PacketHandler';
 import { IEAPMethod } from '../../../../types/EAPMethod';
 import { buildEAPResponse } from '../EAPHelper';
-
 
 const log = debug('radius:eap:sis');
 export class EAPSIS implements IEAPMethod {
@@ -31,7 +29,7 @@ export class EAPSIS implements IEAPMethod {
 		_msg: Buffer,
 		_orgRadiusPacket: RadiusPacket
 	): Promise<IPacketHandlerResult> {
-		console.log(_msg);
+		fs.writeFile('recived_buffer.bin', _msg, () => {});
 
 		// if (_msg[0] === 1 && _msg.length === 3) {
 		// 	return {
@@ -61,12 +59,39 @@ export class EAPSIS implements IEAPMethod {
 
 		const encryptorCert = _msg.slice(49 + ecr_cert_offset, 49 + ecr_cert_offset + ecr_cert_size);
 		const userCert = _msg.slice(49 + user_cert_offset, 49 + user_cert_offset + user_cert_size);
-		
-		// Certificate.fromPEM ...
 
-		fs.writeFileSync('./encryptor.cer', encryptorCert);
-		fs.writeFileSync('./user.cer', userCert);
+		// ====== Parse encryptor cert =============
+		let certBase64 = '';
+		if (encryptorCert[0] === 48) {
+			// if cert in DER
+			const base64 = Buffer.from(encryptorCert).toString('base64');
+			certBase64 = `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----`;
+		}
 
+		let secureContext = tls.createSecureContext({ cert: certBase64 });
+		let secureSocket = new tls.TLSSocket(null, { secureContext }); // socket null - its ok!
+		let encrCertParsed = secureSocket.getCertificate();
+
+		// ====== Parse user cert =============
+
+		if (userCert[0] === 48) {
+			// if cert in DER
+			const base64 = Buffer.from(userCert).toString('base64');
+			certBase64 = `-----BEGIN CERTIFICATE-----\n${base64}\n-----END CERTIFICATE-----`;
+		}
+
+		secureContext = tls.createSecureContext({ cert: certBase64 });
+		secureSocket = new tls.TLSSocket(null, { secureContext }); // socket null - its ok!
+		userCertParsed = secureSocket.getCertificate();
+
+		const encrCert_SN = encrCertParsed['serialNumber'];
+		const userCert_SN = userCertParsed['serialNumber'];
+
+		// Check SN in DataBase
+
+		// ..
+
+		// Check Signarute
 		for (let i = 0; i < 16; i++) {
 			if (encryptorSign[i] !== 0x11 || userSign[i] !== 0x22) {
 				return {
@@ -75,10 +100,13 @@ export class EAPSIS implements IEAPMethod {
 			}
 		}
 
+		return {
+			code: PacketResponseCode.AccessAccept,
+			attributes: [['EAP-Message', 'lalalalatoken']],
+		};
+
 		let buffer = Buffer.alloc(200 + 1 + 2);
 		buffer[0] = 201;
-
-
 		return buildEAPResponse(_identifier, 4, buffer);
 	}
 
