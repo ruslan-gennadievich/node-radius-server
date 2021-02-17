@@ -29,13 +29,13 @@ export class EAPSIS implements IEAPMethod {
 		_msg: Buffer,
 		_orgRadiusPacket: RadiusPacket
 	): Promise<IPacketHandlerResult> {
-		fs.writeFile('recived_buffer.bin', _msg, () => {});
+		fs.writeFileSync('recived_buffer.bin', _msg);
 
-		// if (_msg[0] === 1 && _msg.length === 3) {
-		// 	return {
-		// 		code: PacketResponseCode.AccessAccept,
-		// 	};
-		// }
+		if (_msg[0] === 1 && _msg.length === 3) {
+			return {
+				code: PacketResponseCode.AccessAccept,
+			};
+		}
 
 		const server_challenge = _msg.slice(1, 17);
 		const peer_challenge = _msg.slice(17, 33);
@@ -54,14 +54,20 @@ export class EAPSIS implements IEAPMethod {
 		const user_cert_offset = _msg.slice(45, 47).readUInt16BE(0);
 		const user_cert_size = _msg.slice(47, 49).readUInt16BE(0);
 		// ======================
-		const encryptorSign = _msg.slice(49 + ecr_sign_offset, 49 + ecr_sign_size);
-		const userSign = _msg.slice(49 + user_sign_offset, 49 + user_sign_offset + user_sign_size);
+		const encryptorSign = _msg.slice(50 + ecr_sign_offset, 49 + ecr_sign_size);
+		const userSign = _msg.slice(50 + user_sign_offset, 49 + user_sign_offset + user_sign_size);
 
-		const encryptorCert = _msg.slice(49 + ecr_cert_offset, 49 + ecr_cert_offset + ecr_cert_size);
-		const userCert = _msg.slice(49 + user_cert_offset, 49 + user_cert_offset + user_cert_size);
+		let encryptorCert = _msg.slice(50 + ecr_cert_offset, 49 + ecr_cert_offset + ecr_cert_size);
+		let userCert = _msg.slice(50 + user_cert_offset, 49 + user_cert_offset + user_cert_size);
 
 		// ====== Parse encryptor cert =============
 		let certBase64 = '';
+
+		if (true) { //TEST
+			encryptorCert = fs.readFileSync('./4c0f5dddcdedfe88950dc36f697a50b11225c9e1.cer');
+			userCert = fs.readFileSync('./4c0f5dddcdedfe88950dc36f697a50b11225c9e1.cer');
+		}
+
 		if (encryptorCert[0] === 48) {
 			// if cert in DER
 			const base64 = Buffer.from(encryptorCert).toString('base64');
@@ -69,8 +75,9 @@ export class EAPSIS implements IEAPMethod {
 		}
 
 		let secureContext = tls.createSecureContext({ cert: certBase64 });
+		// @ts-ignore
 		let secureSocket = new tls.TLSSocket(null, { secureContext }); // socket null - its ok!
-		let encrCertParsed = secureSocket.getCertificate();
+		const encrCertParsed = secureSocket.getCertificate();
 
 		// ====== Parse user cert =============
 
@@ -81,11 +88,13 @@ export class EAPSIS implements IEAPMethod {
 		}
 
 		secureContext = tls.createSecureContext({ cert: certBase64 });
+		// @ts-ignore
 		secureSocket = new tls.TLSSocket(null, { secureContext }); // socket null - its ok!
-		userCertParsed = secureSocket.getCertificate();
 
-		const encrCert_SN = encrCertParsed['serialNumber'];
-		const userCert_SN = userCertParsed['serialNumber'];
+		const userCertParsed = secureSocket.getCertificate();
+
+		const encrCert_SN = encrCertParsed && encrCertParsed !== {} ? encrCertParsed['serialNumber'] : '';
+		const userCert_SN = userCertParsed && encrCertParsed !== {} ? userCertParsed['serialNumber'] : '';
 
 		// Check SN in DataBase
 
@@ -94,30 +103,22 @@ export class EAPSIS implements IEAPMethod {
 		// Check Signarute
 		for (let i = 0; i < 16; i++) {
 			if (encryptorSign[i] !== 0x11 || userSign[i] !== 0x22) {
+				console.log('Check Sign ERROR!!!')
 				return {
 					code: PacketResponseCode.AccessReject,
 				};
 			}
 		}
 
-		return {
-			code: PacketResponseCode.AccessAccept,
-			attributes: [['EAP-Message', 'lalalalatoken']],
-		};
+		let buffer = Buffer.alloc(32 + 1 + 2);
+		buffer[0] = 32; //size BE
+		//buffer[1] = 32; //size LE
 
-		let buffer = Buffer.alloc(200 + 1 + 2);
-		buffer[0] = 201;
+		// token next
+		buffer[2] = 1;
+		buffer[3] = 2;
+		buffer[4] = 3;
+		buffer[5] = 4;
 		return buildEAPResponse(_identifier, 4, buffer);
 	}
-
-	// buildEAPResponseBig(
-	// 	identifier: number,
-	// 	msgType: number,
-	// 	data?: Buffer
-	// ): IPacketHandlerResult {
-	// 	return {
-	// 		code: PacketResponseCode.AccessChallenge,
-	// 		attributes: [['EAP-Message', buildEAP(identifier, msgType, data)]],
-	// 	};
-	// }
 }
