@@ -32,6 +32,7 @@ export class EAPSIS implements IEAPMethod {
 	private ModeCheckSign: IModeCheckSign = IModeCheckSign.ENCRYPTOR_AND_USER; // (1 - default in encryptor; 2 - only encryptor; 3 - encryptor+user)
 
 	private checkSign(dataRaw: Buffer, signDer: Buffer, certBase64: string): ICheckSign {
+		// certBase64 with out -----BEGIN CERTIFICATE-----
 		try {
 			const dataRawBase64 = dataRaw.toString('base64');
 			const signDerBase64 = signDer.toString('base64');
@@ -43,10 +44,10 @@ export class EAPSIS implements IEAPMethod {
 		}
 	}
 
-	private SendToken(_identifier, _stateID) {
+	private SendToken(_identifier) {
 		const buffer = Buffer.alloc(32 + 1 + 2);
-		console.log('_stateID', _stateID);
-		buffer.fill(_stateID, 2); // _stateID as token
+		//console.log('_stateID', _stateID);
+		buffer.fill(_identifier, 2); // _stateID as token
 		buffer[0] = 32; // size LE
 		// buffer[1] = 32; // size BE
 		return buildEAPResponse(_identifier, 4, buffer);
@@ -194,7 +195,8 @@ export class EAPSIS implements IEAPMethod {
 
 				return { code: PacketResponseCode.AccessReject };
 			}
-			return this.SendToken(_identifier, _stateID);
+
+			return this.SendToken(_identifier);
 		} else {
 			console.log(`unknow check method ${this.ModeCheckSign}`);
 			return { code: PacketResponseCode.AccessReject };
