@@ -49,10 +49,15 @@ export class EAPSIS implements IEAPMethod {
 
 	private SendToken(_identifier) {
 		const buffer = Buffer.alloc(32 + 1 + 2);
-		//console.log('_stateID', _stateID);
-		buffer.fill(_identifier, 2); // _stateID as token
+
 		buffer[0] = 32; // size LE
-		// buffer[1] = 32; // size BE
+		buffer[1] = 0; // size BE
+
+		const r = crypto.randomBytes(32);
+		console.log('Token is ', Buffer.from(r).toString('base64'));
+		buffer.fill(r, 2);
+
+		this.DataToSign_NodeCache.set(_identifier, r);
 		return buildEAPResponse(_identifier, 4, buffer);
 	}
 
@@ -66,8 +71,9 @@ export class EAPSIS implements IEAPMethod {
 		buff[0] = 16; // size head LE
 		buff[1] = 0; // size head BE
 		buff[2] = this.ModeCheckSign;
+
 		crypto.randomFillSync(buff, 3); // random data for sign
-		const ServerRandom = buff.slice(2); // first two is size - slice it
+		const ServerRandom = buff.slice(2); // first two is size  Slice it
 		this.DataToSign_NodeCache.set(identifier, ServerRandom); // cache _stateID = buff
 		return buildEAPResponse(identifier, 4, buff);
 	}
@@ -217,6 +223,15 @@ export class EAPSIS implements IEAPMethod {
 		} else if (this.ModeCheckSign === IModeCheckSign.ONLY_ENCRYPTOR) {
 			console.log(`check method ${this.ModeCheckSign} not implemented`);
 		} else if (this.ModeCheckSign === IModeCheckSign.ENCRYPTOR_AND_USER) {
+			if (encryptorSign.length === 0) {
+				console.log('ERROR Encryptor Sign is empty!');
+				return { code: PacketResponseCode.AccessReject };
+			}
+			if (userSign.length === 0) {
+				console.log('ERROR User Sign is empty!');
+				return { code: PacketResponseCode.AccessReject };
+			}
+
 			const checkEncryptorResult = this.checkSign(
 				DataToHash,
 				encryptorSign,
