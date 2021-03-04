@@ -37,6 +37,7 @@
 		"ldapjs": "^2.2.2",
 		"native-duplexpair": "^1.0.0",
 		"node-cache": "^5.1.2",
+		"node-forge": "^0.10.0",
 		"radius": "~1.1.4",
 		"smtp-client": "^0.3.3",
 		"yargs": "~16.1.1"

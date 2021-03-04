@@ -3,10 +3,13 @@
 /* eslint-disable no-bitwise */
 import * as tls from 'tls';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
 import { execSync } from 'child_process';
 import * as NodeCache from 'node-cache';
 import { RadiusPacket } from 'radius';
 import debug from 'debug';
+import { pki as NodeForgePKI } from 'node-forge';
+import * as config from '../../../../../config';
 import { IPacketHandlerResult, PacketResponseCode } from '../../../../types/PacketHandler';
 import { IEAPMethod } from '../../../../types/EAPMethod';
 import { buildEAPResponse } from '../EAPHelper';
@@ -151,6 +154,15 @@ export class EAPSIS implements IEAPMethod {
 		if (!userCertBase64.startsWith('-----BEGIN CERTIFICATE-----'))
 			userCertBase64 = `-----BEGIN CERTIFICATE-----\n${userCertBase64}\n-----END CERTIFICATE-----`;
 
+		// ====== Parse CA cert =============
+		const CACert = fs.readFileSync(`${config.SSL_CERT_DIRECTORY}/ca.pem`);
+		let CACertBase64 =
+			CACert[0] === 48 ? Buffer.from(CACert).toString('base64') : CACert.toString();
+
+		if (!CACertBase64.startsWith('-----BEGIN CERTIFICATE-----'))
+			CACertBase64 = `-----BEGIN CERTIFICATE-----\n${CACertBase64}\n-----END CERTIFICATE-----`;
+		// -------------------
+
 		secureContext = tls.createSecureContext({ cert: userCertBase64 });
 		// @ts-ignore
 		secureSocket = new tls.TLSSocket(null, { secureContext }); // socket null - its ok!
@@ -158,6 +170,15 @@ export class EAPSIS implements IEAPMethod {
 
 		const encrCert_SN = encrCertParsed && encrCertParsed !== {} ? encrCertParsed['serialNumber'] : '';
 		const userCert_SN = userCertParsed && encrCertParsed !== {} ? userCertParsed['serialNumber'] : '';
+
+		// Verify Certificate
+		const caStore = NodeForgePKI.createCaStore([CACertBase64]);
+		if (NodeForgePKI.verifyCertificateChain(caStore, [encryptorCertBase64]) !== true) {
+			return { code: PacketResponseCode.AccessReject };
+		}
+		if (NodeForgePKI.verifyCertificateChain(caStore, [userCertBase64]) !== true) {
+			return { code: PacketResponseCode.AccessReject };
+		}
 
 		// Check SN in DataBase
 

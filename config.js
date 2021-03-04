@@ -2,9 +2,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const SSL_CERT_DIRECTORY = path.join(__dirname, './ssl/cert');
+const SSL_CERT_DIRECTORY = process.env.SSL_CERT_DIRECTORY || path.join(__dirname, './ssl/cert');
 
 module.exports = {
+	SSL_CERT_DIRECTORY,
 	port: 1812,
 	// radius secret
 	secret: 'testing123',
