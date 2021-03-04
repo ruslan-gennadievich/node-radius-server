@@ -171,14 +171,35 @@ export class EAPSIS implements IEAPMethod {
 		const encrCert_SN = encrCertParsed && encrCertParsed !== {} ? encrCertParsed['serialNumber'] : '';
 		const userCert_SN = userCertParsed && encrCertParsed !== {} ? userCertParsed['serialNumber'] : '';
 
-		// Verify Certificate
-		const caStore = NodeForgePKI.createCaStore([CACertBase64]);
-		if (NodeForgePKI.verifyCertificateChain(caStore, [encryptorCertBase64]) !== true) {
-			return { code: PacketResponseCode.AccessReject };
-		}
-		if (NodeForgePKI.verifyCertificateChain(caStore, [userCertBase64]) !== true) {
-			return { code: PacketResponseCode.AccessReject };
-		}
+		// // Verify Certificate		
+		// let caStore = null;
+		// try {
+		// 	caStore = NodeForgePKI.createCaStore([CACertBase64]);
+		// } catch (error) {
+		// 	console.log('ERROR read CA cert');
+		// 	console.error(error.message);
+		// 	return { code: PacketResponseCode.AccessReject };
+		// }
+
+		// try {
+		// 	if (NodeForgePKI.verifyCertificateChain(caStore, [encryptorCertBase64]) !== true) {
+		// 		return { code: PacketResponseCode.AccessReject };
+		// 	}
+		// } catch (error) {
+		// 	console.log('ERROR verify Encryptor cert');
+		// 	console.error(error.message);
+		// 	return { code: PacketResponseCode.AccessReject };
+		// }
+
+		// try {
+		// 	if (NodeForgePKI.verifyCertificateChain(caStore, [userCertBase64]) !== true) {
+		// 		return { code: PacketResponseCode.AccessReject };
+		// 	}
+		// } catch (error) {
+		// 	console.log('ERROR verify User cert');
+		// 	console.error(error.message);
+		// 	return { code: PacketResponseCode.AccessReject };
+		// }
 
 		// Check SN in DataBase
 
