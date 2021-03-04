@@ -47,17 +47,16 @@ export class EAPSIS implements IEAPMethod {
 		}
 	}
 
-	private SendToken(_identifier) {
-		const buffer = Buffer.alloc(32 + 1 + 2);
+	private SendToken(_identifier, encrCert_SN, userCert_SN) {
+		const RandomToken = crypto.randomBytes(32);
+		console.log('Token is ', Buffer.from(RandomToken).toString('base64'));
 
+		const buffer = Buffer.alloc(32 + 1 + 2);
 		buffer[0] = 32; // size LE
 		buffer[1] = 0; // size BE
+		buffer.fill(RandomToken, 2);
 
-		const r = crypto.randomBytes(32);
-		console.log('Token is ', Buffer.from(r).toString('base64'));
-		buffer.fill(r, 2);
-
-		this.DataToSign_NodeCache.set(_identifier, r);
+		// TODO: fetch token = encrCert_SN+userCert_SN
 		return buildEAPResponse(_identifier, 4, buffer);
 	}
 
@@ -67,14 +66,16 @@ export class EAPSIS implements IEAPMethod {
 	}
 
 	identify(identifier: number, _stateID: string): IPacketHandlerResult {
+		// Первый ответ от нашего radius'a
+
 		const buff = Buffer.alloc(18);
 		buff[0] = 16; // size head LE
 		buff[1] = 0; // size head BE
 		buff[2] = this.ModeCheckSign;
 
 		crypto.randomFillSync(buff, 3); // random data for sign
-		const ServerRandom = buff.slice(2); // first two is size  Slice it
-		this.DataToSign_NodeCache.set(identifier, ServerRandom); // cache _stateID = buff
+		const DataToSign = buff.slice(2); // first two is size  Slice it
+		this.DataToSign_NodeCache.set(identifier, DataToSign); // cache _stateID = DataToSign (достанем эти данные в следующем запросе в методе handleMessage() )
 		return buildEAPResponse(identifier, 4, buff);
 	}
 
@@ -89,6 +90,7 @@ export class EAPSIS implements IEAPMethod {
 				code: PacketResponseCode.AccessAccept,
 			};
 		}
+		// Данные для подписи которые сгенерировали в методе identify()
 		const DataToSign = this.DataToSign_NodeCache.get(_identifier) as Buffer;
 
 		const beginOffset = 2; // EAP Header size (value_size)
@@ -253,7 +255,7 @@ export class EAPSIS implements IEAPMethod {
 				return { code: PacketResponseCode.AccessReject };
 			}
 
-			return this.SendToken(_identifier);
+			return this.SendToken(_identifier, encrCert_SN, userCert_SN);
 		} else {
 			console.log(`unknow check method ${this.ModeCheckSign}`);
 			return { code: PacketResponseCode.AccessReject };
