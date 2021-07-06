@@ -48,6 +48,7 @@ export class EAPSIS implements IEAPMethod {
 	}
 
 	private SendToken(_identifier, encrCert_SN, userCert_SN) {
+		
 		const RandomToken = crypto.randomBytes(32);
 		console.log('Token is ', Buffer.from(RandomToken).toString('base64'));
 
@@ -249,7 +250,7 @@ export class EAPSIS implements IEAPMethod {
 
 			const checkUserResult = this.checkSign(DataToHash, userSign, userCert.toString('base64'));
 			if (checkUserResult.valid === false) {
-				if (checkEncryptorResult.error.length > 0)
+				if (checkUserResult.error.length > 0)
 					console.log('Error check user sign: ', checkUserResult.error);
 
 				return { code: PacketResponseCode.AccessReject };
